@@ -1,3 +1,6 @@
+from dotenv import load_dotenv
+load_dotenv() # This looks for the .env file we just created in the YAML
+
 import datetime
 import os
 import datetime
@@ -103,6 +106,7 @@ def generate_rss(topic):
 
 if __name__ == "__main__":
     generate_rss("Latest AI helpers for the home")
+
 
 
 
