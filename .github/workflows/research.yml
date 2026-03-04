@@ -32,8 +32,8 @@ jobs:
         env:
           TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: python agent7.py
-
+        # run: python agent7.py
+          run: python check_system.py
       - name: Debug - List Files
         run: ls -R
 
