@@ -1,7 +1,5 @@
-fpdf2
-requests
 google-genai
 tavily-python
+fpdf2
+requests
 python-dotenv
-google-generativeai
-
