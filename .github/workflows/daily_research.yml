@@ -25,7 +25,10 @@ jobs:
 
       - name: 📦 Install Dependencies
         run: |
-          pip install google-generativeai tavily-python python-dotenv
+          python -m pip install --upgrade pip
+          pip install google-generativeai 
+          pip install fpdf2 requests requests google-genai tavily-python python-dotenv
+          pip install -r requirements.txt
 
       - name: 🔑 Inject Secrets to .env
         run: |
