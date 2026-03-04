@@ -2,22 +2,19 @@ name: Daily Senior Research Update
 
 on:
   schedule:
-    - cron: '0 13 * * *'  # Automatic run at 8:00 AM EST
-  workflow_dispatch:      # <--- THIS LINE ADDS THE "TEST RUN" BUTTON
-    inputs:
-      reason:
-        description: 'Reason for manual run'
-        required: false
-        default: 'Testing the agent'
+    # Runs automatically at 13:00 UTC (8:00 AM EST)
+    - cron: '0 13 * * *'
+  # Adds the manual "Test Run" button in the Actions tab
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: write     # Allows the bot to push changes back to your repo
+      contents: write  # Crucial: Allows the bot to push research.xml to your repo
 
     steps:
-      - name: Checkout code
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
       - name: Set up Python
@@ -25,21 +22,32 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install dependencies
+      - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install tavily-python google-generativeai
 
-      - name: Run research script
+      - name: Run Research Script
+        # THIS IS THE PART THAT FIXES YOUR ERROR
         env:
           TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: python agent7.py
 
-      - name: Commit and Push changes
+      - name: Debug - List Files
+        run: ls -R
+
+      - name: Commit and Push Changes
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git add research.xml
-          git commit -m "Automated Research Update: $(date)" || echo "No changes to commit"
-          git push
+          
+          # Only push if the file was successfully created
+          if [ -f "research.xml" ]; then
+            git add research.xml
+            git commit -m "Automated Research Update: $(date)" || echo "No changes to commit"
+            git push
+          else
+            echo "❌ Error: research.xml was not created. Check script logs."
+            exit 1
+          fi
