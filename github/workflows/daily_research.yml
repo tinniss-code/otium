@@ -2,8 +2,13 @@ name: Daily Senior Research Update
 
 on:
   schedule:
-    - cron: '0 13 * * *' # Runs every day at 8:00 AM EST (13:00 UTC)
-  workflow_dispatch:      # Allows you to run it manually for testing
+    - cron: '0 13 * * *'  # Automatic run at 8:00 AM EST
+  workflow_dispatch:      # <--- THIS LINE ADDS THE "TEST RUN" BUTTON
+    inputs:
+      reason:
+        description: 'Reason for manual run'
+        required: false
+        default: 'Testing the agent'
 
 jobs:
   build:
