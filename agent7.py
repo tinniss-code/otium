@@ -7,8 +7,11 @@ from tavily import TavilyClient
 
 # --- CONFIG (Updated for 2026 Security Standards) ---
 # This looks for secrets in your GitHub Settings or Local Environment
-TAVILY_API_KEY = os.getenv("Lab")
-GEMINI_API_KEY = os.getenv("Lab")
+# TAVILY_API_KEY = os.getenv("Lab")
+# GEMINI_API_KEY = os.getenv("Lab")
+
+TAVILY_API_KEY = "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"
+GEMINI_API_KEY = "AIzaSyD4EacpgF4_BG2OQK5F0sd4ySITygCEaVw"
 
 # The public URL where your GitHub Page hosts the file
 FEED_LINK = "https://tinniss-code.github.io/otium/"
@@ -103,6 +106,7 @@ def generate_rss(topic):
 
 if __name__ == "__main__":
     generate_rss("Latest AI helpers for the home")
+
 
 
 
