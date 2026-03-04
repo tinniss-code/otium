@@ -1,115 +1,141 @@
-from dotenv import load_dotenv
-load_dotenv() # This looks for the .env file we just created in the YAML
-
-import datetime
 import os
-import datetime
-import google.generativeai as genai
+import requests
+import json
+from fpdf import FPDF
+from dotenv import load_dotenv
 from tavily import TavilyClient
+from google import genai
+from google.genai import types
 
-
-# --- CONFIG (Updated for 2026 Security Standards) ---
-# This looks for secrets in your GitHub Settings or Local Environment
+# 1. INITIALIZATION & SECRETS
+load_dotenv()
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-# The public URL where your GitHub Page hosts the file
-FEED_LINK = "https://tinniss-code.github.io/otium/"
-
-# Validate that keys are actually loaded to prevent silent crashes
 if not TAVILY_API_KEY or not GEMINI_API_KEY:
     print("❌ ERROR: API keys not found! Ensure they are set in GitHub Secrets.")
-# Setup Clients
+    exit(1)
+
+# Initialize Clients
 tavily = TavilyClient(api_key=TAVILY_API_KEY)
-genai.configure(api_key=GEMINI_API_KEY)
+client = genai.Client(api_key=GEMINI_API_KEY)
 
-def get_best_model():
-    """Finds the best available flash model to avoid 404 errors."""
-    available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-    
-    # Priority list for 2026
-    priorities = ['gemini-3.1-flash-lite', 'gemini-3-flash', 'gemini-2.5-flash', 'gemini-2.0-flash']
-    
-    for p in priorities:
-        full_name = f"models/{p}"
-        if full_name in available_models:
-            print(f"✅ Found and using: {full_name}")
-            return genai.GenerativeModel(p)
-    
-    # Fallback if none of our priorities are found
-    if available_models:
-        fallback = available_models[0].replace('models/', '')
-        print(f"🔄 Fallback to available model: {fallback}")
-        return genai.GenerativeModel(fallback)
-    
-    raise Exception("No generative models found for this API key.")
+# ---------------------------------------------------------
+# 2. SENIOR-FRIENDLY PDF CLASS & FUNCTION
+# ---------------------------------------------------------
+class SeniorPDF(FPDF):
+    def header(self):
+        # Header with large, clear text
+        self.set_font("Arial", 'B', 22)
+        self.set_text_color(0, 0, 0)
+        self.cell(0, 15, "Daily AI Research for Seniors", ln=True, align='C')
+        self.set_draw_color(0, 0, 0)
+        self.line(10, 25, 200, 25) # High-contrast separator line
+        self.ln(10)
 
-# Initialize the 'Brain'
-model = get_best_model()
-
-def rewrite_for_seniors(raw_data):
-    """Uses Gemini to simplify tech news into senior-friendly HTML."""
-    print("🤖 Simplifying the news for your readers...")
+def create_senior_pdf(research_items, filename="daily_research.pdf"):
+    pdf = SeniorPDF()
+    pdf.set_auto_page_break(auto=True, margin=20)
     
-    prompt = f"""
-    You are a friendly editor for a senior-focused newsletter.
-    Rewrite this news into a warm, readable format:
-    1. <h2> tags for LARGE HEADLINES.
-    2. <p> tags for the body (use font-size: 18px in style if possible). 
-    3. No technical jargon. 
-    4. Include 'Why this matters for your daily life:' for each story.
-    5. Return ONLY the HTML code. No markdown code blocks.
-    
-    DATA: {raw_data}
-    """
-    
-    response = model.generate_content(prompt)
-    content = response.text
-    # Strip any accidental Markdown wrappers
-    return content.replace("```html", "").replace("```", "").strip()
+    for item in research_items:
+        pdf.add_page()
+        
+        # 1. Headline (20pt Bold)
+        pdf.set_font("Arial", 'B', 20)
+        pdf.set_text_color(0, 51, 102) # Dark blue for distinction
+        pdf.multi_cell(0, 12, item.get('title', 'Untitled News'))
+        pdf.ln(5)
 
-def generate_rss(topic):
-    try:
-        print(f"🔎 Researching: {topic}...")
-        search = tavily.search(query=topic, search_depth="advanced", max_results=3)
-        
-        raw_context = ""
-        for res in search['results']:
-            raw_context += f"Title: {res['title']}\nContent: {res['content']}\nLink: {res['url']}\n\n"
-        
-        senior_friendly_html = rewrite_for_seniors(raw_context)
-        
-        # Build RSS with RFC 822 Date format
-        now = datetime.datetime.now(datetime.timezone.utc).strftime("%a, %d %b %Y %H:%M:%S +0000")
-        
-        rss = f"""<?xml version="1.0" encoding="UTF-8" ?>
-<rss version="2.0">
-<channel>
-  <title>The Simple Tech Report</title>
-  <link>{FEED_LINK}</link>
-  <description>Technology made easy.</description>
-  <item>
-    <title>Today's Update: {topic}</title>
-    <description><![CDATA[ {senior_friendly_html} ]]></description>
-    <pubDate>{now}</pubDate>
-    <guid isPermaLink="false">{int(datetime.datetime.now().timestamp())}</guid>
-  </item>
-</channel>
-</rss>"""
+        # 2. Image & Description
+        if item.get('image_url'):
+            try:
+                img_data = requests.get(item['image_url'], timeout=10).content
+                with open("temp.jpg", "wb") as f:
+                    f.write(img_data)
+                
+                # Center image: page width is 210mm, margins 10mm. 160mm wide image.
+                pdf.image("temp.jpg", x=25, w=160)
+                pdf.ln(2)
+                
+                # Text description for accessibility (Italics)
+                pdf.set_font("Arial", 'I', 11)
+                pdf.set_text_color(80, 80, 80)
+                pdf.multi_cell(0, 7, f"Visual Description: {item.get('visual_desc', 'AI Technology in use.')}")
+                pdf.set_text_color(0, 0, 0) # Reset to black
+                pdf.ln(5)
+            except Exception as e:
+                print(f"Skipping image for {item['title']}: {e}")
 
-        with open("research.xml", "w", encoding="utf-8") as f:
-            f.write(rss)
-        print("✅ research.xml updated successfully!")
-        
-    except Exception as e:
-        print(f"❌ Error: {e}")
+        # 3. Summary (14pt Regular)
+        pdf.set_font("Arial", '', 14)
+        pdf.multi_cell(0, 9, item.get('summary', 'No summary available.'))
+        pdf.ln(10)
+
+        # 4. "Why it Matters" Section (Grey Highlight Box)
+        pdf.set_fill_color(240, 240, 240)
+        pdf.set_font("Arial", 'B', 14)
+        pdf.cell(0, 10, " Why this matters for you:", ln=True, fill=True)
+        pdf.set_font("Arial", '', 13)
+        pdf.multi_cell(0, 8, item.get('relevance', 'This helps you stay informed.'), fill=True)
+
+    pdf.output(filename)
+    if os.path.exists("temp.jpg"):
+        os.remove("temp.jpg")
+
+# ---------------------------------------------------------
+# 3. MAIN EXECUTION LOGIC
+# ---------------------------------------------------------
+def main():
+    print("🚀 Starting Daily Research...")
+
+    # A. Search for news
+    search_query = "latest user-friendly AI technology for seniors 2026"
+    search_results = tavily.search(query=search_query, include_images=True, max_results=5)
+    
+    # B. Process with Gemini 3.1 using Senior-Friendly Prompt
+    system_instruction = (
+        "You are the Otium Senior Tech Research Agent. Summarize news for people aged 70+.\n"
+        "Rules:\n"
+        "1. NO abstract/neon AI art. Choose real photos from provided context.\n"
+        "2. Provide a 'visual_desc' for accessibility.\n"
+        "3. Focus on 'Why this matters for you' regarding safety or family connection.\n"
+        "4. Use JSON format."
+    )
+    
+    # Defining the structure we want back
+    response_schema = {
+        "type": "array",
+        "items": {
+            "type": "object",
+            "properties": {
+                "title": {"type": "string"},
+                "summary": {"type": "string"},
+                "image_url": {"type": "string"},
+                "visual_desc": {"type": "string"},
+                "relevance": {"type": "string"}
+            },
+            "required": ["title", "summary", "relevance"]
+        }
+    }
+
+    print("🤖 Analyzing findings with Gemini...")
+    response = client.models.generate_content(
+        model="gemini-2.0-flash", # Or gemini-1.5-pro
+        contents=f"Research these results: {json.dumps(search_results['results'])}",
+        config=types.GenerateContentConfig(
+            system_instruction=system_instruction,
+            response_mime_type="application/json",
+            response_schema=response_schema
+        )
+    )
+
+    research_data = json.loads(response.text)
+
+    # C. GENERATE THE PDF
+    print(f"📄 Creating PDF for {len(research_data)} items...")
+    create_senior_pdf(research_data)
+    
+    print("✅ Done! File saved as daily_research.pdf")
 
 if __name__ == "__main__":
-    generate_rss("Latest AI helpers for the home")
-
-
-
-
-
-
-
+    main()
