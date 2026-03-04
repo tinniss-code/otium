@@ -1,6 +1,3 @@
-from dotenv import load_dotenv
-load_dotenv()  # This loads the keys from the .env file automatically
-
 import os
 import datetime
 import google.generativeai as genai
@@ -117,4 +114,5 @@ def generate_rss(topic):
 # --- 4. EXECUTION ---
 if __name__ == "__main__":
     # Feel free to change this topic to anything your readers care about!
+
     generate_rss("Helpful AI assistants and home safety for seniors")
