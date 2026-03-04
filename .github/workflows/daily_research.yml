@@ -1,0 +1,54 @@
+name: Otium Daily Research
+
+on:
+  schedule:
+    - cron: '0 13 * * *' # 8 AM EST (13:00 UTC)
+  workflow_dispatch:      # Manual "Test Run" button
+
+jobs:
+  research_and_publish:
+    runs-on: ubuntu-latest
+    
+    # Ensure the workflow has permission to write the XML back to the repo
+    permissions:
+      contents: write
+
+    steps:
+      - name: 🛒 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 📦 Install Dependencies
+        run: |
+          pip install google-generativeai tavily-python python-dotenv
+
+      - name: 🔑 Inject Secrets to .env
+        run: |
+          echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> .env
+          echo "TAVILY_API_KEY=${{ secrets.TAVILY_API_KEY }}" >> .env
+          echo "Secrets injected to environment file."
+
+      - name: 🔍 Pre-flight Connectivity Check
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+        run: python check_system.py
+
+      - name: 🤖 Run Research Agent (agent7.py)
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+        run: python agent7.py
+
+      - name: 🚀 Deploy Research to GitHub Pages
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add research.xml
+          git commit -m "Update Research Feed: $(date +'%Y-%m-%d')" || echo "No changes to commit"
+          git push
