@@ -1,0 +1,45 @@
+name: Daily Senior Research Update
+
+on:
+  schedule:
+    - cron: '0 13 * * *'  # Automatic run at 8:00 AM EST
+  workflow_dispatch:      # <--- THIS LINE ADDS THE "TEST RUN" BUTTON
+    inputs:
+      reason:
+        description: 'Reason for manual run'
+        required: false
+        default: 'Testing the agent'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write     # Allows the bot to push changes back to your repo
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run research script
+        env:
+          TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: python agent3.py
+
+      - name: Commit and Push changes
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add research.xml
+          git commit -m "Automated Research Update: $(date)" || echo "No changes to commit"
+          git push
