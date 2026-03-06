@@ -76,40 +76,37 @@ def main():
     )
 
     model_id = "gemini-2.0-flash" 
-    system_prompt = (
-        "You are a senior tech educator. Output ONLY a JSON array. "
-        "For each article, provide a clear 'title', a 'summary' of 4-5 sentences, "
-        "and a 'relevance' section for daily senior life."
-    )
-
-    print(f"🤖 Processing with {model_id}...")
     
     try:
         response = client.models.generate_content(
             model=model_id,
             contents=f"Context: {json.dumps(search_results['results'])}",
             config=types.GenerateContentConfig(
-                system_instruction=system_prompt,
+                system_instruction="You are a senior tech educator. Output ONLY a JSON array with title, summary (4-5 sentences), and relevance.",
                 response_mime_type="application/json"
             )
         )
         
         final_data = json.loads(response.text)
         
-        # --- THE FIX: Define absolute path clearly ---
-        output_filename = os.path.join(os.getcwd(), "daily_research.pdf")
+        # --- THE PATH FIX ---
+        # This ensures the file is saved in the root of the GitHub Workspace
+        output_filename = "daily_research.pdf"
+        full_path = os.path.abspath(output_filename)
         
-        print(f"📄 Writing PDF to: {output_filename}")
-        create_senior_pdf(final_data, output_filename)
+        print(f"📂 Current Working Directory: {os.getcwd()}")
+        print(f"📄 Attempting to write PDF to: {full_path}")
         
-        # Verification check for GitHub Actions
-        if os.path.exists(output_filename):
-            print(f"✅ PDF creation verified. Size: {os.path.getsize(output_filename)} bytes")
+        create_senior_pdf(final_data, full_path)
+        
+        if os.path.exists(full_path):
+            print(f"✅ SUCCESS: PDF created. size: {os.path.getsize(full_path)} bytes")
         else:
-            print("❌ PDF creation failed: File not found on disk.")
+            print("❌ ERROR: File reported as saved but not found on disk.")
             
     except Exception as e:
         print(f"❌ Critical Error: {e}")
 
 if __name__ == "__main__":
     main()
+
