@@ -18,7 +18,7 @@ jobs:
       - name: 🐍 Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11' # Fixed syntax from python-python to python-version
+          python-version: '3.11'
 
       - name: 📦 Install Dependencies
         run: |
@@ -31,20 +31,25 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: python agent7.py
 
-      - name: 🔍 Verify PDF Existence
+      # --- THIS IS THE NEW CRITICAL STEP ---
+      - name: 🔍 Locate and Prepare PDF
         run: |
-          ls -lh
+          echo "Searching for the PDF file..."
+          # This finds the file wherever it was saved and moves it to the root
+          find . -name "daily_research.pdf" -exec mv {} . \;
+          # This confirms it exists in the root for the next step
           if [ -f "daily_research.pdf" ]; then
-            echo "✅ PDF found successfully."
+            echo "✅ PDF successfully located in root."
+            ls -la daily_research.pdf
           else
-            echo "❌ PDF NOT FOUND in root directory."
-            find . -name "*.pdf"
+            echo "❌ PDF NOT FOUND anywhere in the workspace."
+            exit 1
           fi
 
       - name: 📤 Upload Research PDF
         uses: actions/upload-artifact@v4
         with:
           name: daily-senior-research-pdf
-          path: daily_research.pdf  # No wildcards needed if the path is absolute in Python
+          path: daily_research.pdf
           if-no-files-found: error
           retention-days: 7
