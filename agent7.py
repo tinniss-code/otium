@@ -35,42 +35,45 @@ def main():
           response_format={ "type": "json_object" }
         )
         
-        # --- THE FIX: Robust Data Parsing ---
         raw_content = response.choices[0].message.content
         data = json.loads(raw_content)
 
-        # 1. Check if data is a list. If not, look for a list inside it.
-        if isinstance(data, list):
-            articles = data
-        elif isinstance(data, dict):
-            # Try to find a list inside common keys like 'articles' or 'items'
-            articles = data.get('articles', data.get('items', None))
-            # If no list found inside keys, use the dict itself as a single-item list
-            if articles is None:
-                articles = [data]
-        else:
-            articles = []
+        if isinstance(data, list): articles = data
+        elif isinstance(data, dict): articles = data.get('articles', data.get('items', [data]))
+        else: articles = []
 
-        # 2. Generate PDF
         pdf = FPDF()
         pdf.add_page()
+        
+        # Effective Page Width (epw) is safer than 0
+        width = pdf.epw 
+
         pdf.set_font("helvetica", 'B', 20)
-        pdf.cell(0, 10, "Daily Senior AI Report", ln=True, align='C')
+        # --- FIX 1: Explicitly set X to margin before printing ---
+        pdf.set_x(pdf.l_margin) 
+        pdf.cell(width, 10, "Daily Senior AI Report", ln=True, align='C')
         pdf.ln(10)
 
         for item in articles:
-            # Ensure item is a dictionary before calling .get()
             if not isinstance(item, dict): continue
             
+            # --- FIX 2: Reset X for every section to prevent cumulative drift ---
+            pdf.set_x(pdf.l_margin)
             pdf.set_font("helvetica", 'B', 16)
-            pdf.multi_cell(0, 10, str(item.get('title', 'AI Update')))
+            pdf.multi_cell(width, 10, str(item.get('title', 'AI Update')))
+            
+            pdf.set_x(pdf.l_margin)
             pdf.set_font("helvetica", '', 14)
-            pdf.multi_cell(0, 8, str(item.get('summary', '')))
-            pdf.ln(3)
+            pdf.multi_cell(width, 8, str(item.get('summary', '')))
+            
+            pdf.ln(2)
+            pdf.set_x(pdf.l_margin)
             pdf.set_font("helvetica", 'B', 14)
-            pdf.cell(0, 8, "Why this matters:", ln=True)
+            pdf.cell(width, 8, "Why this matters:", ln=True)
+            
+            pdf.set_x(pdf.l_margin)
             pdf.set_font("helvetica", '', 14)
-            pdf.multi_cell(0, 8, str(item.get('relevance', '')))
+            pdf.multi_cell(width, 8, str(item.get('relevance', '')))
             pdf.ln(10)
             
         pdf.output("daily_research.pdf")
