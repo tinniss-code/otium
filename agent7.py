@@ -38,7 +38,7 @@ def create_senior_pdf(research_items, filename):
     pdf.set_auto_page_break(auto=True, margin=20)
     
     for index, item in enumerate(research_items):
-        # Header for each article (Starting a new paragraph, not a new page)
+        # Header (New Paragraph style)
         pdf.set_font("helvetica", 'B', 18)
         pdf.set_text_color(0, 51, 102) 
         pdf.multi_cell(0, 10, item.get('title', 'AI Update'))
@@ -56,13 +56,14 @@ def create_senior_pdf(research_items, filename):
         pdf.set_font("helvetica", '', 14)
         pdf.multi_cell(0, 9, item.get('relevance', ''))
         
-        # Divider between articles
+        # Divider
         if index < len(research_items) - 1:
             pdf.ln(12) 
             pdf.set_draw_color(200, 200, 200)
             pdf.line(20, pdf.get_y(), 190, pdf.get_y()) 
             pdf.ln(12)
 
+    # Force the file to write to the current directory
     pdf.output(filename)
 
 # ---------------------------------------------------------
@@ -89,24 +90,20 @@ def main():
         
         final_data = json.loads(response.text)
         
-        # --- THE PATH FIX ---
-        # This ensures the file is saved in the root of the GitHub Workspace
+        # USE SIMPLE FILENAME (YAML will find it)
         output_filename = "daily_research.pdf"
-        full_path = os.path.abspath(output_filename)
         
-        print(f"📂 Current Working Directory: {os.getcwd()}")
-        print(f"📄 Attempting to write PDF to: {full_path}")
+        print(f"📂 Current Directory: {os.getcwd()}")
+        create_senior_pdf(final_data, output_filename)
         
-        create_senior_pdf(final_data, full_path)
-        
-        if os.path.exists(full_path):
-            print(f"✅ SUCCESS: PDF created. size: {os.path.getsize(full_path)} bytes")
+        # Final Verification before exiting Python
+        if os.path.isfile(output_filename):
+            print(f"✅ SUCCESS: {output_filename} exists. Size: {os.path.getsize(output_filename)} bytes")
         else:
-            print("❌ ERROR: File reported as saved but not found on disk.")
+            print("❌ ERROR: PDF was not found after creation.")
             
     except Exception as e:
         print(f"❌ Critical Error: {e}")
 
 if __name__ == "__main__":
     main()
-
