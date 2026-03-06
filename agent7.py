@@ -51,7 +51,7 @@ def main():
         search_results = tavily.search(query="2026 AI gadgets for elderly independence", max_results=3)
         
         response = client.models.generate_content(
-            model="gemini-2.0-flash",
+            model="gemini-1.5-flash",
             contents=f"Context: {json.dumps(search_results['results'])}",
             config=types.GenerateContentConfig(
                 system_instruction="Output ONLY a JSON array with: title, summary (4-5 sentences), and relevance.",
@@ -74,3 +74,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
