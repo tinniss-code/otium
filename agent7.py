@@ -52,7 +52,6 @@ def main():
     print("🔍 Searching for news...")
     search_results = tavily.search(query="helpful AI for seniors 2026", include_images=True, max_results=3)
     
-    # Using gemini-2.5-flash-lite for better 2026 Free Tier stability
     model_id = "gemini-2.5-flash-lite"
     print(f"🤖 Processing with {model_id}...")
 
@@ -67,17 +66,27 @@ def main():
                 )
             )
             data = json.loads(response.text)
-            create_senior_pdf(data)
-            print("✅ PDF successfully created.")
+            
+            # Use an absolute path to ensure GitHub Actions sees it
+            output_path = os.path.join(os.getcwd(), "daily_research.pdf")
+            create_senior_pdf(data, filename=output_path)
+            
+            if os.path.exists(output_path):
+                print(f"✅ PDF successfully created at: {output_path}")
+                print(f"File size: {os.path.getsize(output_path)} bytes")
+            else:
+                print("❌ PDF was not found after creation attempt!")
+                
             return
         except errors.ClientError as e:
             if "429" in str(e):
                 print(f"⏳ Quota hit. Attempt {attempt+1}/3. Waiting...")
                 time.sleep(30)
             else:
-                print(f"❌ Error: {e}"); break
+                print(f"❌ Gemini Error: {e}"); break
         except Exception as e:
-            print(f"❌ Error: {e}"); break
+            print(f"❌ Unexpected Error: {e}"); break
 
 if __name__ == "__main__":
     main()
+
