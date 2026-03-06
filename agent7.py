@@ -7,10 +7,14 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Use OpenRouter as the stable alternative
+# Safety Check: Ensure the key is actually loaded
+api_key = os.getenv("OPENROUTER_API_KEY")
+if not api_key:
+    raise ValueError("❌ OPENROUTER_API_KEY not found! Check your GitHub Secrets and Workflow 'env' block.")
+
 client = OpenAI(
   base_url="https://openrouter.ai/api/v1",
-  api_key=os.getenv("OPENROUTER_API_KEY"), # Get a free key at openrouter.ai
+  api_key=api_key,
 )
 tavily = TavilyClient(api_key=os.getenv("TAVILY_API_KEY"))
 
@@ -32,4 +36,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
