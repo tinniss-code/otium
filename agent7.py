@@ -18,67 +18,48 @@ tavily = TavilyClient(api_key=TAVILY_API_KEY)
 client = genai.Client(api_key=GEMINI_API_KEY)
 
 # ---------------------------------------------------------
-# 2. SENIOR-FRIENDLY PDF LOGIC (FLOWING PARAGRAPHS)
+# 2. SENIOR-FRIENDLY PDF LOGIC
 # ---------------------------------------------------------
 class SeniorPDF(FPDF):
     def header(self):
         if self.page_no() == 1:
             self.set_font("helvetica", 'B', 22)
-            self.set_text_color(0, 0, 0)
-            # Title
             self.cell(0, 10, "Daily AI Research Report", ln=True, align='C')
-            # Current Date
             self.set_font("helvetica", '', 12)
             current_date = datetime.now().strftime("%B %d, %Y")
             self.cell(0, 10, f"Report Date: {current_date}", ln=True, align='C')
-            # Visual Separator
             self.set_draw_color(0, 0, 0)
             self.line(10, 32, 200, 32) 
             self.ln(10)
 
 def create_senior_pdf(research_items, filename):
     pdf = SeniorPDF()
-    pdf.add_page() # Start the document
+    pdf.add_page()
     pdf.set_auto_page_break(auto=True, margin=20)
     
     for index, item in enumerate(research_items):
-        # --- ARTICLE HEADER ---
+        # Header for each article (Starting a new paragraph, not a new page)
         pdf.set_font("helvetica", 'B', 18)
-        pdf.set_text_color(0, 51, 102) # Professional Blue
+        pdf.set_text_color(0, 51, 102) 
         pdf.multi_cell(0, 10, item.get('title', 'AI Update'))
         pdf.ln(2) 
 
-        # --- IMAGE (Optional) ---
-        if item.get('image_url'):
-            try:
-                img_data = requests.get(item['image_url'], timeout=10).content
-                temp_img = "temp_capture.jpg"
-                with open(temp_img, "wb") as f: f.write(img_data)
-                # Centers image slightly
-                pdf.image(temp_img, x=25, w=150)
-                pdf.ln(4)
-                os.remove(temp_img)
-            except: 
-                pass
-
-        # --- SUMMARY PARAGRAPH ---
+        # Summary
         pdf.set_font("helvetica", '', 14)
         pdf.set_text_color(0, 0, 0)
-        # Detailed summary
         pdf.multi_cell(0, 9, item.get('summary', ''))
         pdf.ln(4)
 
-        # --- WHY IT MATTERS PARAGRAPH ---
+        # Relevance
         pdf.set_font("helvetica", 'B', 14)
         pdf.multi_cell(0, 9, "Why this matters for you:")
         pdf.set_font("helvetica", '', 14)
         pdf.multi_cell(0, 9, item.get('relevance', ''))
         
-        # --- SPACING BETWEEN ARTICLES ---
-        # Don't add a divider after the very last article
+        # Divider between articles
         if index < len(research_items) - 1:
             pdf.ln(12) 
-            pdf.set_draw_color(200, 200, 200) # Light grey line
+            pdf.set_draw_color(200, 200, 200)
             pdf.line(20, pdf.get_y(), 190, pdf.get_y()) 
             pdf.ln(12)
 
@@ -89,22 +70,16 @@ def create_senior_pdf(research_items, filename):
 # ---------------------------------------------------------
 def main():
     print("🔍 Searching for news...")
-    # Specifically looking for high-detail senior-tech topics
     search_results = tavily.search(
         query="2026 AI gadgets for elderly independence safety features detailed",
-        include_images=True,
         max_results=3
     )
 
     model_id = "gemini-2.0-flash" 
-    
     system_prompt = (
-        "You are an expert tech educator for seniors. Output ONLY a JSON array. "
-        "For each article, provide: "
-        "1. A clear, descriptive 'title'. "
-        "2. A detailed 'summary' (at least 4-5 sentences) covering specific features. "
-        "3. An 'image_url' from the context. "
-        "4. A 'relevance' section explaining the direct benefit to a senior's daily life."
+        "You are a senior tech educator. Output ONLY a JSON array. "
+        "For each article, provide a clear 'title', a 'summary' of 4-5 sentences, "
+        "and a 'relevance' section for daily senior life."
     )
 
     print(f"🤖 Processing with {model_id}...")
@@ -120,13 +95,21 @@ def main():
         )
         
         final_data = json.loads(response.text)
+        
+        # --- THE FIX: Define absolute path clearly ---
         output_filename = os.path.join(os.getcwd(), "daily_research.pdf")
         
+        print(f"📄 Writing PDF to: {output_filename}")
         create_senior_pdf(final_data, output_filename)
-        print(f"✅ Success! Detailed PDF created at {output_filename}")
+        
+        # Verification check for GitHub Actions
+        if os.path.exists(output_filename):
+            print(f"✅ PDF creation verified. Size: {os.path.getsize(output_filename)} bytes")
+        else:
+            print("❌ PDF creation failed: File not found on disk.")
             
     except Exception as e:
-        print(f"❌ Error during execution: {e}")
+        print(f"❌ Critical Error: {e}")
 
 if __name__ == "__main__":
     main()
