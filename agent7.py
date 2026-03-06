@@ -9,8 +9,11 @@ from google.genai import types
 
 load_dotenv()
 
-# Initialize Client
-client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+# 1. Initialize Client (Defaults to v1 stable if configured)
+client = genai.Client(
+    api_key=os.getenv("GEMINI_API_KEY"),
+    http_options=types.HttpOptions(api_version='v1') # Force stable production API
+)
 tavily = TavilyClient(api_key=os.getenv("TAVILY_API_KEY"))
 
 class SeniorPDF(FPDF):
@@ -34,12 +37,12 @@ def create_senior_pdf(research_items, filename):
         pdf.ln(2)
         pdf.set_font("helvetica", '', 14)
         pdf.set_text_color(0, 0, 0)
-        pdf.multi_cell(0, 9, item.get('summary', ''))
+        pdf.multi_cell(0, 9, item.get('summary', 'No summary generated.'))
         pdf.ln(4)
         pdf.set_font("helvetica", 'B', 14)
         pdf.multi_cell(0, 9, "Why this matters for you:")
         pdf.set_font("helvetica", '', 14)
-        pdf.multi_cell(0, 9, item.get('relevance', ''))
+        pdf.multi_cell(0, 9, item.get('relevance', 'No relevance generated.'))
         if index < len(research_items) - 1:
             pdf.ln(12)
             pdf.set_draw_color(200, 200, 200)
@@ -49,36 +52,36 @@ def create_senior_pdf(research_items, filename):
 
 def main():
     output_filename = "daily_research.pdf"
-    # 1.5-flash is currently the most stable model for this SDK
-    model_id = "gemini-2.5-flash-lite" 
+    
+    # Use the 2026 stable GA model
+    model_id = "gemini-2.5-flash" 
     
     try:
-        search_results = tavily.search(query="2026 AI gadgets for seniors", max_results=3)
+        print(f"🔍 Fetching search results and calling {model_id}...")
+        search_results = tavily.search(query="2026 AI gadgets for elderly independence", max_results=3)
         
-        # --- THE CORRECT SYNTAX FOR GOOGLE-GENAI SDK ---
+        # New SDK Syntax: system_instruction goes inside GenerateContentConfig
         response = client.models.generate_content(
             model=model_id,
             contents=f"Context: {json.dumps(search_results['results'])}",
             config=types.GenerateContentConfig(
-                system_instruction="Explain AI to seniors. Output ONLY a JSON array with: title, summary (4-5 detailed sentences), and relevance.",
+                system_instruction="You are a senior tech educator. Output ONLY a JSON array with: title, summary (4-5 sentences), and relevance.",
                 response_mime_type="application/json"
             )
         )
         
         final_data = json.loads(response.text)
         create_senior_pdf(final_data, output_filename)
-        print(f"✅ Success with {model_id}")
+        print(f"✅ Created: {output_filename}")
 
     except Exception as e:
         print(f"❌ Error: {e}")
-        # Generate Error PDF so the workflow doesn't fail
+        # Create an error log PDF so you can see why it failed in the artifact
         error_pdf = SeniorPDF()
         error_pdf.add_page()
         error_pdf.set_font("helvetica", 'B', 12)
-        error_pdf.multi_cell(0, 10, f"Error Details: {str(e)}")
+        error_pdf.multi_cell(0, 10, f"Critical Error: {str(e)}")
         error_pdf.output(output_filename)
 
 if __name__ == "__main__":
     main()
-
-
