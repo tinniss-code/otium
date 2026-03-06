@@ -19,6 +19,14 @@ client = OpenAI(
 tavily = TavilyClient(api_key=os.getenv("TAVILY_API_KEY"))
 
 def main():
+    key = os.getenv("OPENROUTER_API_KEY")
+    if not key:
+        print("❌ ERROR: OPENROUTER_API_KEY is empty. Check GitHub Secrets.")
+        return
+    
+    # This prints the length only—perfect for debugging without leaking!
+    print(f"🔑 API Key detected (Length: {len(key)})")
+    
     search_results = tavily.search(query="2026 AI gadgets for seniors", max_results=3)
     
     # Standard OpenAI syntax - works 100% of the time with Gemini on OpenRouter
@@ -36,5 +44,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
