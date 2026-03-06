@@ -1,9 +1,9 @@
 name: Otium Daily Research
 
 on:
-  workflow_dispatch: # Allows you to run it manually
+  workflow_dispatch:
   schedule:
-    - cron: '0 9 * * *' # Runs daily at 9 AM
+    - cron: '0 9 * * *'
 
 jobs:
   build:
@@ -29,20 +29,25 @@ jobs:
         env:
           TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: python agent7.py
+        run: |
+          python agent7.py
+          # Wait 2 seconds for disk I/O to finish
+          sleep 2
 
-      # --- THIS IS THE NEW CRITICAL STEP ---
       - name: 🔍 Locate and Prepare PDF
         run: |
+          echo "Current location: $(pwd)"
+          echo "Listing all files in workspace..."
+          ls -R
+          
           echo "Searching for the PDF file..."
-          # This finds the file wherever it was saved and moves it to the root
+          # If it exists anywhere, move it to the root
           find . -name "daily_research.pdf" -exec mv {} . \;
-          # This confirms it exists in the root for the next step
+          
           if [ -f "daily_research.pdf" ]; then
-            echo "✅ PDF successfully located in root."
-            ls -la daily_research.pdf
+            echo "✅ PDF found and moved to root."
           else
-            echo "❌ PDF NOT FOUND anywhere in the workspace."
+            echo "❌ PDF NOT FOUND. Checking if script failed silently."
             exit 1
           fi
 
@@ -50,6 +55,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: daily-senior-research-pdf
-          path: daily_research.pdf
+          path: ./daily_research.pdf
           if-no-files-found: error
           retention-days: 7
