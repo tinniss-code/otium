@@ -17,7 +17,7 @@ jobs:
           python-version: '3.11'
 
       - name: 📦 Install
-        run: pip install fpdf2 requests google-genai tavily-python python-dotenv
+        run: pip install openai fpdf2 requests tavily-python python-dotenv
 
       - name: 🤖 Run Agent
         env:
