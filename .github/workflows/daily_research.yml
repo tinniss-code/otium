@@ -1,57 +1,39 @@
 name: Otium Daily Research
 
 on:
+  workflow_dispatch: # Allows you to run it manually
   schedule:
-    - cron: '0 13 * * *' # 8 AM EST (13:00 UTC)
-  workflow_dispatch:      # Manual "Test Run" button
+    - cron: '0 9 * * *' # Runs daily at 9 AM
 
 jobs:
-  research_and_publish:
+  build:
     runs-on: ubuntu-latest
-    
-    # Ensure the workflow has permission to write the XML back to the repo
     permissions:
-      contents: write
-
+      contents: write # Needed if you want to save the PDF directly to the repo
+    
     steps:
-      - name: 🛒 Checkout Repository
+      - name: 🔍 Checkout Code
         uses: actions/checkout@v4
 
       - name: 🐍 Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-          cache: 'pip'
+          python-python: '3.11'
 
       - name: 📦 Install Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install google-generativeai 
-          pip install fpdf2 requests requests google-genai tavily-python python-dotenv
-          pip install -r requirements.txt
+          pip install fpdf2 requests google-genai tavily-python python-dotenv
 
-      - name: 🔑 Inject Secrets to .env
-        run: |
-          echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> .env
-          echo "TAVILY_API_KEY=${{ secrets.TAVILY_API_KEY }}" >> .env
-          echo "Secrets injected to environment file."
-
-      - name: 🔍 Pre-flight Connectivity Check
+      - name: 🤖 Run Research Agent
         env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
-        run: python check_system.py
-
-      - name: 🤖 Run Research Agent (agent7.py)
-        env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
         run: python agent7.py
 
-      - name: 🚀 Deploy Research to GitHub Pages
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add research.xml
-          git commit -m "Update Research Feed: $(date +'%Y-%m-%d')" || echo "No changes to commit"
-          git push
+      - name: 📤 Upload Research PDF
+        uses: actions/upload-artifact@v4
+        with:
+          name: daily-senior-research-pdf
+          path: daily_research.pdf
+          if-no-files-found: error
