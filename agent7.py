@@ -50,7 +50,7 @@ def create_senior_pdf(research_items, filename):
 def main():
     output_filename = "daily_research.pdf"
     # 1.5-flash is currently the most stable model for this SDK
-    model_id = "gemini-1.5-flash" 
+    model_id = "gemini-3.0-flash" 
     
     try:
         search_results = tavily.search(query="2026 AI gadgets for seniors", max_results=3)
@@ -80,3 +80,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
