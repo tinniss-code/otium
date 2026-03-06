@@ -9,11 +9,8 @@ from google.genai import types
 
 load_dotenv()
 
-# Explicitly set the client to use the stable 'v1' API version
-client = genai.Client(
-    api_key=os.getenv("GEMINI_API_KEY"),
-    http_options=types.HttpOptions(api_version='v1')
-)
+# 1. Initialize Client
+client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 tavily = TavilyClient(api_key=os.getenv("TAVILY_API_KEY"))
 
 class SeniorPDF(FPDF):
@@ -52,32 +49,36 @@ def create_senior_pdf(research_items, filename):
 
 def main():
     output_filename = "daily_research.pdf"
-    # Using the current stable workhorse model
-    model_id = "gemini-2.5-flash"
+    model_id = "gemini-2.0-flash" # or "gemini-1.5-flash"
     
     try:
         search_results = tavily.search(query="2026 AI gadgets for seniors", max_results=3)
         
+        # --- THE FIX: Move parameters OUT of config ---
         response = client.models.generate_content(
             model=model_id,
             contents=f"Context: {json.dumps(search_results['results'])}",
             config=types.GenerateContentConfig(
-                system_instruction="Explain AI to seniors. Output ONLY a JSON array with: title, summary (4-5 sentences), and relevance.",
-                response_mime_type="application/json"
-            )
+                # Keep only technical params like temperature here
+                temperature=0.7 
+            ),
+            # Move these to the main call:
+            system_instruction="Output ONLY a JSON array with: title, summary, and relevance.",
+            extra_headers={'X-Goog-Api-Format-Version': '2'} # Optional safety
         )
         
+        # Note: In google-genai, JSON mode is often handled automatically 
+        # but if you need a raw string, use response.text
         final_data = json.loads(response.text)
         create_senior_pdf(final_data, output_filename)
-        print(f"✅ Success! Generated with {model_id}")
+        print(f"✅ Success with {model_id}")
 
     except Exception as e:
         print(f"❌ Error: {e}")
-        # Generate Error PDF so the workflow doesn't fail
         error_pdf = SeniorPDF()
         error_pdf.add_page()
         error_pdf.set_font("helvetica", 'B', 12)
-        error_pdf.multi_cell(0, 10, f"Critical Error: {str(e)}")
+        error_pdf.multi_cell(0, 10, f"Error: {str(e)}")
         error_pdf.output(output_filename)
 
 if __name__ == "__main__":
