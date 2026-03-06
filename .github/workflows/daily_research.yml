@@ -23,9 +23,7 @@ jobs:
         env:
           TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: |
-          python agent7.py
-          ls -la  # Immediately check if the file exists
+        run: python agent7.py
 
       - name: 📤 Upload Artifact
         uses: actions/upload-artifact@v4
