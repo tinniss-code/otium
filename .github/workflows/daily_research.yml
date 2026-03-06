@@ -9,7 +9,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # Needed if you want to save the PDF directly to the repo
+      contents: write 
     
     steps:
       - name: 🔍 Checkout Code
@@ -18,7 +18,7 @@ jobs:
       - name: 🐍 Set up Python
         uses: actions/setup-python@v5
         with:
-          python-python: '3.11'
+          python-version: '3.11' # Fixed syntax from python-python to python-version
 
       - name: 📦 Install Dependencies
         run: |
@@ -31,9 +31,21 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: python agent7.py
 
+      - name: 🔍 Verify PDF Existence
+        run: |
+          ls -lh
+          if [ -f "daily_research.pdf" ]; then
+            echo "✅ PDF found successfully."
+          else
+            echo "❌ PDF NOT FOUND in root directory."
+            find . -name "*.pdf"
+          fi
+
       - name: 📤 Upload Research PDF
         uses: actions/upload-artifact@v4
         with:
           name: daily-senior-research-pdf
-          path: daily_research.pdf
+          # Using wildcard path to ensure it catches the file even if path varies slightly
+          path: "**/*.pdf"
           if-no-files-found: error
+          retention-days: 7
