@@ -45,7 +45,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: daily-senior-research-pdf
-          # Using wildcard path to ensure it catches the file even if path varies slightly
-          path: "**/*.pdf"
+          path: daily_research.pdf  # No wildcards needed if the path is absolute in Python
           if-no-files-found: error
           retention-days: 7
