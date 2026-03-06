@@ -1,5 +1,4 @@
 name: Otium Daily Research
-
 on:
   workflow_dispatch:
   schedule:
@@ -8,53 +7,29 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write 
-    
     steps:
-      - name: 🔍 Checkout Code
+      - name: 🔍 Checkout
         uses: actions/checkout@v4
 
-      - name: 🐍 Set up Python
+      - name: 🐍 Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: 📦 Install Dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install fpdf2 requests google-genai tavily-python python-dotenv
+      - name: 📦 Install
+        run: pip install fpdf2 requests google-genai tavily-python python-dotenv
 
-      - name: 🤖 Run Research Agent
+      - name: 🤖 Run Agent
         env:
           TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           python agent7.py
-          # Wait 2 seconds for disk I/O to finish
-          sleep 2
+          ls -la  # Immediately check if the file exists
 
-      - name: 🔍 Locate and Prepare PDF
-        run: |
-          echo "Current location: $(pwd)"
-          echo "Listing all files in workspace..."
-          ls -R
-          
-          echo "Searching for the PDF file..."
-          # If it exists anywhere, move it to the root
-          find . -name "daily_research.pdf" -exec mv {} . \;
-          
-          if [ -f "daily_research.pdf" ]; then
-            echo "✅ PDF found and moved to root."
-          else
-            echo "❌ PDF NOT FOUND. Checking if script failed silently."
-            exit 1
-          fi
-
-      - name: 📤 Upload Research PDF
+      - name: 📤 Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: daily-senior-research-pdf
-          path: ./daily_research.pdf
+          path: daily_research.pdf
           if-no-files-found: error
-          retention-days: 7
