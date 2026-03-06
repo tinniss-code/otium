@@ -11,62 +11,72 @@ def create_error_pdf(msg):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("helvetica", 'B', 12)
-    pdf.multi_cell(0, 10, f"Error during generation: {msg}")
+    pdf.multi_cell(0, 10, f"Error: {msg}")
     pdf.output("daily_research.pdf")
 
 def main():
-    # --- STEP 1: KEY VALIDATION ---
     api_key = os.getenv("OPENROUTER_API_KEY")
     if not api_key:
-        create_error_pdf("OPENROUTER_API_KEY is missing from environment.")
-        print("❌ Missing API Key")
+        create_error_pdf("OPENROUTER_API_KEY is missing.")
         return
 
     client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=api_key)
     tavily = TavilyClient(api_key=os.getenv("TAVILY_API_KEY"))
 
     try:
-        # --- STEP 2: RESEARCH ---
         search_results = tavily.search(query="2026 AI gadgets for seniors", max_results=3)
         
-        # --- STEP 3: AI CALL ---
         response = client.chat.completions.create(
           model="google/gemini-2.0-flash-001",
           messages=[
-            {"role": "system", "content": "Return ONLY a JSON array of 3 objects. Each with 'title', 'summary' (4 sentences), and 'relevance'."},
-            {"role": "user", "content": f"Data: {json.dumps(search_results['results'])}"}
+            {"role": "system", "content": "Return ONLY a JSON list of objects. Each with 'title', 'summary', and 'relevance'."},
+            {"role": "user", "content": f"Summarize: {json.dumps(search_results['results'])}"}
           ],
           response_format={ "type": "json_object" }
         )
         
-        # --- STEP 4: PDF GENERATION ---
+        # --- THE FIX: Robust Data Parsing ---
         raw_content = response.choices[0].message.content
         data = json.loads(raw_content)
-        # Handle if AI wraps the array in a "items" or "articles" key
-        articles = data.get('articles', data.get('items', data))
-        if isinstance(articles, dict): articles = [articles] # Fallback for single object
 
+        # 1. Check if data is a list. If not, look for a list inside it.
+        if isinstance(data, list):
+            articles = data
+        elif isinstance(data, dict):
+            # Try to find a list inside common keys like 'articles' or 'items'
+            articles = data.get('articles', data.get('items', None))
+            # If no list found inside keys, use the dict itself as a single-item list
+            if articles is None:
+                articles = [data]
+        else:
+            articles = []
+
+        # 2. Generate PDF
         pdf = FPDF()
         pdf.add_page()
-        pdf.set_font("helvetica", 'B', 16)
-        pdf.cell(0, 10, "Daily Senior Research", ln=True, align='C')
-        pdf.ln(5)
+        pdf.set_font("helvetica", 'B', 20)
+        pdf.cell(0, 10, "Daily Senior AI Report", ln=True, align='C')
+        pdf.ln(10)
 
         for item in articles:
+            # Ensure item is a dictionary before calling .get()
+            if not isinstance(item, dict): continue
+            
+            pdf.set_font("helvetica", 'B', 16)
+            pdf.multi_cell(0, 10, str(item.get('title', 'AI Update')))
+            pdf.set_font("helvetica", '', 14)
+            pdf.multi_cell(0, 8, str(item.get('summary', '')))
+            pdf.ln(3)
             pdf.set_font("helvetica", 'B', 14)
-            pdf.multi_cell(0, 10, str(item.get('title', 'AI News')))
-            pdf.set_font("helvetica", '', 12)
-            pdf.multi_cell(0, 7, str(item.get('summary', '')))
-            pdf.ln(2)
-            pdf.set_font("helvetica", 'I', 12)
-            pdf.multi_cell(0, 7, f"Relevance: {item.get('relevance', '')}")
+            pdf.cell(0, 8, "Why this matters:", ln=True)
+            pdf.set_font("helvetica", '', 14)
+            pdf.multi_cell(0, 8, str(item.get('relevance', '')))
             pdf.ln(10)
             
         pdf.output("daily_research.pdf")
-        print("✅ Success: daily_research.pdf created.")
+        print("✅ SUCCESS")
 
     except Exception as e:
-        print(f"❌ Critical Error: {e}")
         create_error_pdf(str(e))
 
 if __name__ == "__main__":
