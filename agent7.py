@@ -79,7 +79,7 @@ def create_senior_pdf(research_items, filename):
 def main():
     print("🔍 Searching for news...")
     search_results = tavily.search(
-        query="latest helpful AI technology for seniors simple daily use 2026",
+        query="latest helpful AI technology for seniors",
         include_images=True,
         max_results=3
     )
@@ -128,3 +128,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
