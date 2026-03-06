@@ -10,7 +10,7 @@ load_dotenv()
 # Use OpenRouter as the stable alternative
 client = OpenAI(
   base_url="https://openrouter.ai/api/v1",
-  api_key=os.getenv("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"), # Get a free key at openrouter.ai
+  api_key=os.getenv("OPENROUTER_API_KEY"), # Get a free key at openrouter.ai
 )
 tavily = TavilyClient(api_key=os.getenv("TAVILY_API_KEY"))
 
@@ -32,3 +32,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
